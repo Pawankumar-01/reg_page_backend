@@ -66,10 +66,24 @@ def send_ack_email(to_email: str, name: str, tier: str, location: str, conferenc
 
     body = f"""
     <html>
-      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; padding:20px;">
+
+        <!-- Header with logo -->
+        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:20px;">
+          <div>
+            <h1 style="color:#2E86C1; margin:0; font-size:22px;">IPSA 2025</h1>
+          </div>
+          <div>
+            <img src="https://saigangapanakeia.in/Images/logo.png" 
+                 alt="Sai Ganga Panakeia Ltd" 
+                 style="height:50px;"/>
+          </div>
+        </div>
+
         <h2 style="color:#2E86C1;">Hello {name},</h2>
 
-        <p>Thank you for registering for the <b>IPSA Conference</b>.</p>
+        <p><b>Thank you for registering for the Conference </b> (Two Traditions,
+        One Science : The PSA Paradigm.)</p>
 
         <h3 style="color:#117A65;">Your Registration Details:</h3>
         <table style="border-collapse: collapse; width: 100%; margin-bottom:20px;">
@@ -91,17 +105,17 @@ def send_ack_email(to_email: str, name: str, tier: str, location: str, conferenc
           </tr>
         </table>
 
-        <h3 style="color:#AF601A;">About IPSA 2025</h3>
         <p>
           Healthcare is changing fast — and India is leading the way. 
-          The <b>IPSA Conference 2025</b> is not just another conference, but a 
+          The Conference 
+          is not just another event, but a 
           <span style="color:#D35400;"><b>movement where tradition meets technology</b></span> and ideas turn into action.
-          Uniting <b>Ayurveda, Allopathy, Naturopathy, Nutrition</b> and <b>Digital Health</b>, IPSA 2025 provides 
-          a unique platform for <b>doctors, students, researchers, entrepreneurs</b> and <b>policymakers</b> to collaborate, 
-          learn, and shape the future of integrative healthcare.
+          Uniting <b>Ayurveda, Allopathy, Naturopathy, Nutrition</b> and <b>Digital Health</b>, 
+          IPSA 2025 provides a unique platform for <b>doctors, students, researchers, entrepreneurs</b> 
+          and <b>policymakers</b> to collaborate, learn, and shape the future of integrative healthcare.
         </p>
 
-        <p style="margin-top:20px;">We look forward to welcoming you to <b>IPSA 2025</b>!</p>
+        <p style="margin-top:20px;">We look forward to welcoming you to the Conference.</p>
 
         <p style="margin-top:30px; font-weight:bold; color:#2E4053;">Warm regards, <br>
         Sai Ganga Panakeia Ltd</p>
@@ -109,7 +123,7 @@ def send_ack_email(to_email: str, name: str, tier: str, location: str, conferenc
         <hr style="margin-top:40px;"/>
         <p style="font-size:12px; color:#7F8C8D;">
           📍 Location: {location} | 📅 Date: {conference_date} <br>
-          For any queries, contact us at <a href="mailto:{SMTP_USER}">{SMTP_USER}</a>
+          For any queries, contact us at <a href="mailto:ipsaevent@sgprs.com">ipsaevent@sgprs.com</a>
         </p>
       </body>
     </html>
@@ -129,6 +143,7 @@ def send_ack_email(to_email: str, name: str, tier: str, location: str, conferenc
             print(f"✅ Email sent to {to_email}")
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
+
 
 
 @router.post("/quote")
@@ -163,8 +178,8 @@ def create_order(body: CreateOrderRequest):
     tier, base = current_tier_and_price()
     discount, final_amt_rupees = apply_coupon(base, body.coupon)
 
-    FIXED_LOCATION = "Hyderabad International Convention Centre"
-    FIXED_CONFERENCE_DATE = "2025-09-20"
+    FIXED_LOCATION = "T-HUB"
+    FIXED_CONFERENCE_DATE = "2025-09-21"
 
     amount_paise = final_amt_rupees * 100
     try:
