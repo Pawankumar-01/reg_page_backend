@@ -62,29 +62,64 @@ def send_ack_email(to_email: str, name: str, tier: str, location: str, conferenc
         print("⚠️ SMTP not configured, skipping email.")
         return
 
-    subject = "Conference Registration Confirmation"
+    subject = "🎉 IPSA 2025 – Registration Confirmation"
+
     body = f"""
-Dear {name},
+    <html>
+      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+        <h2 style="color:#2E86C1;">Hello {name},</h2>
 
-Thank you for registering for the conference.
+        <p>Thank you for registering for the <b>IPSA Conference</b>.</p>
 
-Your details:
-- Tier: {tier}
-- Amount Paid: ₹{final_amount}
-- Location: {location}
-- Conference Date: {conference_date}
+        <h3 style="color:#117A65;">Your Registration Details:</h3>
+        <table style="border-collapse: collapse; width: 100%; margin-bottom:20px;">
+          <tr>
+            <td style="border:1px solid #ddd; padding:8px;"><b>Tier</b></td>
+            <td style="border:1px solid #ddd; padding:8px;">{tier}</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ddd; padding:8px;"><b>Amount Paid</b></td>
+            <td style="border:1px solid #ddd; padding:8px;">₹{final_amount}</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ddd; padding:8px;"><b>Location</b></td>
+            <td style="border:1px solid #ddd; padding:8px;">{location}</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #ddd; padding:8px;"><b>Conference Date</b></td>
+            <td style="border:1px solid #ddd; padding:8px;">{conference_date}</td>
+          </tr>
+        </table>
 
-We look forward to seeing you at the event!
+        <h3 style="color:#AF601A;">About IPSA 2025</h3>
+        <p>
+          Healthcare is changing fast — and India is leading the way. 
+          The <b>IPSA Conference 2025</b> is not just another conference, but a 
+          <span style="color:#D35400;"><b>movement where tradition meets technology</b></span> and ideas turn into action.
+          Uniting <b>Ayurveda, Allopathy, Naturopathy, Nutrition</b> and <b>Digital Health</b>, IPSA 2025 provides 
+          a unique platform for <b>doctors, students, researchers, entrepreneurs</b> and <b>policymakers</b> to collaborate, 
+          learn, and shape the future of integrative healthcare.
+        </p>
 
-Regards,
-Conference Team
+        <p style="margin-top:20px;">We look forward to welcoming you to <b>IPSA 2025</b>!</p>
+
+        <p style="margin-top:30px; font-weight:bold; color:#2E4053;">Warm regards, <br>
+        Sai Ganga Panakeia Ltd</p>
+
+        <hr style="margin-top:40px;"/>
+        <p style="font-size:12px; color:#7F8C8D;">
+          📍 Location: {location} | 📅 Date: {conference_date} <br>
+          For any queries, contact us at <a href="mailto:{SMTP_USER}">{SMTP_USER}</a>
+        </p>
+      </body>
+    </html>
     """
 
-    msg = MIMEMultipart()
+    msg = MIMEMultipart("alternative")
     msg["From"] = SMTP_USER
     msg["To"] = to_email
     msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain"))
+    msg.attach(MIMEText(body, "html"))
 
     try:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
@@ -94,6 +129,7 @@ Conference Team
             print(f"✅ Email sent to {to_email}")
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
+
 
 @router.post("/quote")
 def quote(body: CouponRequest):
