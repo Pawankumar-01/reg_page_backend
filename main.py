@@ -7,7 +7,7 @@ app = FastAPI(title="Conference Registration API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173","https://869e69d2798a.ngrok-free.app"],  # React frontend
+    allow_origins=["http://localhost:5173","https://saigangapanakeia.com"],  # React frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
