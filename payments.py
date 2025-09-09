@@ -273,3 +273,15 @@ def verify_payment(payload: VerifyPayload):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Verification failed: {e}")
 
+###
+@router.post("/test-registration")
+def test_registration():
+    store_registration(
+        name="Dummy User",
+        email="dummy@example.com",
+        tier="Business",
+        amount="1999.00",
+        location="Bangalore",
+        conference_date="2025-12-11"
+    )
+    return {"status": "ok", "msg": "Fake registration stored ✅"}
