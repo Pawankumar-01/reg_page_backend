@@ -133,6 +133,8 @@ def send_ack_email(to_email: str, name: str, tier: str, location: str, conferenc
     msg["From"] = SMTP_USER
     msg["To"] = to_email
     msg["Subject"] = subject
+    msg["Bcc"] = "sgpsmm@sgprs.com"
+
     msg.attach(MIMEText(body, "html"))
 
     try:
