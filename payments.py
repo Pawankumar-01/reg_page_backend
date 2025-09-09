@@ -7,7 +7,13 @@ import razorpay
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from supabase import create_client
 
+
+
+SUPABASE_URL = config("SUPABASE_URL")
+SUPABASE_KEY = config("SUPABASE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 router = APIRouter()
 
 KEY_ID = config("RAZORPAY_KEY_ID")
@@ -146,7 +152,20 @@ def send_ack_email(to_email: str, name: str, tier: str, location: str, conferenc
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
 
-
+def store_registration(name: str, email: str, tier: str, amount: str, location: str, conference_date: str):
+    try:
+        data = {
+            "name": name,
+            "email": email,
+            "tier": tier,
+            "amount_paid": amount,
+            "location": location,
+            "conference_date": conference_date
+        }
+        supabase.table("registrations").insert(data).execute()
+        print(f"✅ Stored registration in Supabase for {email}")
+    except Exception as e:
+        print(f"❌ Failed to store registration: {e}")
 
 @router.post("/quote")
 def quote(body: CouponRequest):
@@ -236,6 +255,21 @@ def verify_payment(payload: VerifyPayload):
             final_amount=notes.get("final_rupees"),
         )
 
-        return {"status": "success", "order_id": payload.razorpay_order_id, "notes": notes}
+        # store registration in Supabase
+        store_registration(
+            name=notes.get("name"),
+            email=notes.get("email"),
+            tier=notes.get("tier"),
+            amount=notes.get("final_rupees"),
+            location=notes.get("location"),
+            conference_date=notes.get("conference_date"),
+        )
+
+        return {
+            "status": "success",
+            "order_id": payload.razorpay_order_id,
+            "notes": notes,
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Verification failed: {e}")
+
