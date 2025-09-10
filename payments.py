@@ -67,15 +67,25 @@ def validate_coupon(code: str | None) -> str | None:
     return None
 
 
-def apply_coupon(amount_rupees: int, code: str | None) -> tuple[int, int]:
-    """returns (discount_rupees, final_rupees)"""
-    ctype = validate_coupon(code)
-    if ctype == "FREE":
-        return amount_rupees, 0   # 100% off
-    if ctype == "DISCOUNT":
-        disc = amount_rupees // 2
-        return disc, amount_rupees - disc
-    return 0, amount_rupees
+def apply_coupon(base: int, coupon: str | None) -> tuple[int, int, str]:
+    """
+    Returns: (discount, final_amount, coupon_type)
+    """
+    if not coupon:
+        return (0, base, "none")
+
+    code = normalize(coupon)
+
+    if code == "FREEIPSA2025":
+        return (base, 0, "free")   # Full discount
+
+    if code == "STUDENT50":  # Example 50% off coupon
+        discount = base // 2
+        return (discount, base - discount, "percent")
+
+    # Invalid coupon
+    return (0, base, "invalid")
+
 
 
 def send_ack_email(to_email: str, name: str, tier: str, location: str, conference_date: str, final_amount: str):
