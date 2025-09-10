@@ -203,6 +203,32 @@ def create_order(body: CreateOrderRequest):
     FIXED_LOCATION = "T-HUB"
     FIXED_CONFERENCE_DATE = "2025-09-21"
 
+    if normalize(body.coupon) == "FREEIPSA2025":
+        store_registration(
+            name=body.name,
+            email=body.email,
+            tier="FREE",
+            amount="0",
+            location=FIXED_LOCATION,
+            conference_date=FIXED_CONFERENCE_DATE,
+            college="N/A"  # or capture from request if needed
+        )
+
+        send_ack_email(
+            to_email=body.email,
+            name=body.name,
+            tier="FREE",
+            location=FIXED_LOCATION,
+            conference_date=FIXED_CONFERENCE_DATE,
+            final_amount="0",
+        )
+
+        return {
+            "status": "success",
+            "message": "Registered with free coupon – no payment required.",
+            "free_coupon": True
+        }
+
     amount_paise = final_amt_rupees * 100
     try:
         order = client.order.create({
@@ -264,6 +290,7 @@ def verify_payment(payload: VerifyPayload):
             amount=notes.get("final_rupees"),
             location=notes.get("location"),
             conference_date=notes.get("conference_date"),
+            college=notes.get("college"),
         )
 
         return {
@@ -287,3 +314,8 @@ def test_registration():
         college="IIMS"
     )
     return {"status": "ok", "msg": "Fake registration stored ✅"}
+
+
+
+
+
