@@ -35,6 +35,8 @@ class CreateOrderRequest(BaseModel):
     coupon: str | None = None
     name: str
     email: str
+    college: str | None = None
+    type: str | None = None
    
 
 def today_ist() -> date:
@@ -46,7 +48,7 @@ def current_tier_and_price(d: date | None = None) -> tuple[str, int]:
     if d <= EARLY_END:
         return ("Early Bird", 1000)
     if d <= REGULAR_END:
-        return ("Regular", 1200)
+        return ("Regular", 1000)
     return ("Late/Onsite", 1500)
 
 def normalize(code: str | None) -> str:
@@ -177,7 +179,7 @@ def send_ack_email(to_email: str, name: str, tier: str, location: str, conferenc
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
 
-def store_registration(name: str, email: str, tier: str, amount: str, location: str, conference_date: str, college:str):
+def store_registration(name: str, email: str, tier: str, amount: str, location: str, conference_date: str, college:str,type_: str | None = None):
     try:
         data = {
             "name": name,
@@ -187,6 +189,7 @@ def store_registration(name: str, email: str, tier: str, amount: str, location: 
             "location": location,
             "conference_date": conference_date,
             "college" : college,
+            "type": type_,
         }
         supabase.table("registrations").insert(data).execute()
         print(f"✅ Stored registration in Supabase for {email}")
@@ -241,7 +244,8 @@ def create_order(body: CreateOrderRequest):
             amount="0",
             location=FIXED_LOCATION,
             conference_date=FIXED_CONFERENCE_DATE,
-            college="N/A",  # capture if provided
+            college=body.college,
+            type_=body.type,  # capture if provided
         )
 
         send_ack_email(
@@ -273,6 +277,8 @@ def create_order(body: CreateOrderRequest):
                     "coupon": normalize(body.coupon),
                     "name": body.name,
                     "email": body.email,
+                    "college": body.college or "N/A",
+                    "type": body.type or "N/A", 
                     "location": FIXED_LOCATION,
                     "conference_date": FIXED_CONFERENCE_DATE,
                 }
@@ -321,6 +327,7 @@ def verify_payment(payload: VerifyPayload):
             location=notes.get("location"),
             conference_date=notes.get("conference_date"),
             college=notes.get("college"),
+            type_=notes.get("type"),
         )
 
         return {
