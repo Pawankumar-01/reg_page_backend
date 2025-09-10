@@ -152,7 +152,7 @@ def send_ack_email(to_email: str, name: str, tier: str, location: str, conferenc
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
 
-def store_registration(name: str, email: str, tier: str, amount: str, location: str, conference_date: str):
+def store_registration(name: str, email: str, tier: str, amount: str, location: str, conference_date: str, college:str):
     try:
         data = {
             "name": name,
@@ -160,7 +160,8 @@ def store_registration(name: str, email: str, tier: str, amount: str, location: 
             "tier": tier,
             "amount_paid": amount,
             "location": location,
-            "conference_date": conference_date
+            "conference_date": conference_date,
+            "college" : college,
         }
         supabase.table("registrations").insert(data).execute()
         print(f"✅ Stored registration in Supabase for {email}")
@@ -282,6 +283,7 @@ def test_registration():
         tier="Business",
         amount="1999.00",
         location="Bangalore",
-        conference_date="2025-12-11"
+        conference_date="2025-12-11",
+        college="IIMS"
     )
     return {"status": "ok", "msg": "Fake registration stored ✅"}
