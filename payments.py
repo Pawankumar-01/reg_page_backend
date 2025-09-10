@@ -52,16 +52,31 @@ def current_tier_and_price(d: date | None = None) -> tuple[str, int]:
 def normalize(code: str | None) -> str:
     return (code or "").strip().upper()
 
-def validate_coupon(code: str | None) -> bool:
-    # simple 50% coupon; swap for DB logic when needed
-    return normalize(code) == "IPSA2025"
+def validate_coupon(code: str | None) -> str | None:
+    """
+    Returns type of coupon:
+    - "FREE" for free coupon
+    - "DISCOUNT" for 50% discount coupon
+    - None if invalid
+    """
+    code = normalize(code)
+    if code == "FREEIPSA2025":
+        return "FREE"
+    if code == "IPSA2025":
+        return "DISCOUNT"
+    return None
+
 
 def apply_coupon(amount_rupees: int, code: str | None) -> tuple[int, int]:
     """returns (discount_rupees, final_rupees)"""
-    if validate_coupon(code):
+    ctype = validate_coupon(code)
+    if ctype == "FREE":
+        return amount_rupees, 0   # 100% off
+    if ctype == "DISCOUNT":
         disc = amount_rupees // 2
         return disc, amount_rupees - disc
     return 0, amount_rupees
+
 
 def send_ack_email(to_email: str, name: str, tier: str, location: str, conference_date: str, final_amount: str):
     if not SMTP_USER or not SMTP_PASS:
@@ -171,39 +186,44 @@ def store_registration(name: str, email: str, tier: str, amount: str, location: 
 @router.post("/quote")
 def quote(body: CouponRequest):
     tier, base = current_tier_and_price()
-    discount, final_amt = apply_coupon(base, body.coupon)
+    discount, final_amt, ctype = apply_coupon(base, body.coupon)
     return {
         "tier": tier,
         "base_rupees": base,
         "discount_rupees": discount,
         "final_rupees": final_amt,
-        "coupon_valid": validate_coupon(body.coupon),
+        "coupon_type": ctype,
+        "coupon_valid": ctype != "NONE"
     }
 
 @router.post("/validate-coupon")
 def validate(body: CouponRequest):
     tier, base = current_tier_and_price()
-    ok = validate_coupon(body.coupon)
-    discount, final_amt = apply_coupon(base, body.coupon)
+    discount, final_amt, ctype = apply_coupon(base, body.coupon)
     return {
-        "valid": ok,
+        "valid": ctype != "NONE",
         "tier": tier,
         "base_rupees": base,
         "discount_rupees": discount,
         "final_rupees": final_amt,
-        "message": "Coupon applied" if ok else "Invalid coupon",
+        "coupon_type": ctype,
+        "message": (
+            "Free registration applied" if ctype == "FREE" else
+            "Discount applied" if ctype == "DISCOUNT" else
+            "Invalid coupon"
+        )
     }
 
 @router.post("/create-order")
 def create_order(body: CreateOrderRequest):
-    # server-authoritative pricing (never trust client)
     tier, base = current_tier_and_price()
-    discount, final_amt_rupees = apply_coupon(base, body.coupon)
+    discount, final_amt_rupees, ctype = apply_coupon(base, body.coupon)
 
     FIXED_LOCATION = "T-HUB"
     FIXED_CONFERENCE_DATE = "2025-09-21"
 
-    if normalize(body.coupon) == "FREEIPSA2025":
+    # --- FREE coupon path ---
+    if ctype == "FREE":
         store_registration(
             name=body.name,
             email=body.email,
@@ -211,7 +231,7 @@ def create_order(body: CreateOrderRequest):
             amount="0",
             location=FIXED_LOCATION,
             conference_date=FIXED_CONFERENCE_DATE,
-            college="N/A"  # or capture from request if needed
+            college="N/A",  # capture if provided
         )
 
         send_ack_email(
@@ -226,7 +246,7 @@ def create_order(body: CreateOrderRequest):
         return {
             "status": "success",
             "message": "Registered with free coupon – no payment required.",
-            "free_coupon": True
+            "free_coupon": True,
         }
 
     amount_paise = final_amt_rupees * 100
