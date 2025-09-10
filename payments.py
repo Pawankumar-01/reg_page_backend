@@ -72,19 +72,19 @@ def apply_coupon(base: int, coupon: str | None) -> tuple[int, int, str]:
     Returns: (discount, final_amount, coupon_type)
     """
     if not coupon:
-        return (0, base, "none")
+        return (0, base, "NONE")
 
     code = normalize(coupon)
 
     if code == "FREEIPSA2025":
-        return (base, 0, "free")   # Full discount
+        return (base, 0, "FREE")   # Full discount
 
-    if code == "STUDENT50":  # Example 50% off coupon
+    if code == "IPSA2025":
         discount = base // 2
-        return (discount, base - discount, "percent")
+        return (discount, base - discount, "DISCOUNT")
 
     # Invalid coupon
-    return (0, base, "invalid")
+    return (0, base, "NONE")
 
 
 
