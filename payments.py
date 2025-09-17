@@ -94,7 +94,7 @@ def validate_coupon(code: str | None) -> str | None:
     """
     code = normalize(code)
     if code == "FREEIPSA2025":
-        if free_coupon_used_count() >= 50:   # ✅ limit check
+        if free_coupon_used_count() >=54:   # ✅ limit check
             return None
         return "FREE"
     if code == "IPSA2025":
@@ -112,7 +112,7 @@ def apply_coupon(base: int, coupon: str | None) -> tuple[int, int, str]:
     code = normalize(coupon)
 
     if code == "FREEIPSA2025":
-        if free_coupon_used_count() >= 50:   #  prevent overuse
+        if free_coupon_used_count() >=54:   #  prevent overuse
             return (0, base, "NONE")
         return (base, 0, "FREE")
 
