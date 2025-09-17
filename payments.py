@@ -8,7 +8,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from supabase import create_client
-
+from typing import List, Optional
 
 
 SUPABASE_URL = config("SUPABASE_URL")
@@ -460,6 +460,57 @@ def test_registration():
     )
     return {"status": "ok", "msg": "Fake registration stored ✅"}
 
+
+
+
+class TestGroupMember(BaseModel):
+    fullName: str
+    email: str
+    phone: Optional[str] = None
+    type: Optional[str] = None
+    college: Optional[str] = None
+
+class TestGroupRequest(BaseModel):
+    group_members: List[TestGroupMember]
+
+@router.post("/payments/test-group-registration")
+def test_group_registration(req: TestGroupRequest):
+    FIXED_LOCATION = "T-HUB"
+    FIXED_CONFERENCE_DATE = "2025-09-21"
+
+    size = len(req.group_members)
+    if size < 2:
+        return {"status": "error", "detail": "Group must have at least 2 members"}
+
+    price_per_head = group_discount_price(size)
+
+    for member in req.group_members:
+        send_ack_email(
+            to_email=member.email,
+            name=member.fullName,
+            tier=f"Group-Test ({size})",
+            location=FIXED_LOCATION,
+            conference_date=FIXED_CONFERENCE_DATE,
+            final_amount=str(price_per_head),
+        )
+        store_registration(
+            name=member.fullName,
+            email=member.email,
+            tier=f"Group-Test ({size})",
+            amount=str(price_per_head),
+            location=FIXED_LOCATION,
+            conference_date=FIXED_CONFERENCE_DATE,
+            college=member.college or "N/A",
+            type_=member.type or "N/A",
+        )
+
+    return {
+        "status": "success",
+        "test_mode": True,
+        "group_size": size,
+        "price_per_head": price_per_head,
+        "message": f"✅ Test completed, emails sent and registrations stored for {size} members."
+    }
 
 
 
