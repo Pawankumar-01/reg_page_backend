@@ -123,7 +123,13 @@ def apply_coupon(base: int, coupon: str | None) -> tuple[int, int, str]:
     # Invalid coupon
     return (0, base, "NONE")
 
-
+def group_discount_price(count: int) -> int:
+    base = 1000
+    if count >= 10:   # 10 or more
+        return 300    # 70% off
+    if count >= 5:    # 5 to 9
+        return 400    # 60% off
+    return base
 
 def send_ack_email(to_email: str, name: str, tier: str, location: str, conference_date: str, final_amount: str):
     if not SMTP_USER or not SMTP_PASS:
@@ -297,10 +303,39 @@ def create_order(body: CreateOrderRequest):
             "message": "Registered with free coupon – no payment required.",
             "free_coupon": True,
         }
-    if body.group_members and len(body.group_members) >= 5:
+    # --- GROUP path ---
+    if body.group_members and len(body.group_members) >= 2:
         size = len(body.group_members)
         price_per_head = group_discount_price(size)
         total_rupees = price_per_head * size
+
+        amount_paise = total_rupees * 100
+        try:
+            order = client.order.create({
+                "amount": amount_paise,
+                "currency": "INR",
+                "payment_capture": 1,
+                "notes": {
+                    "tier": f"Group ({size})",
+                    "price_per_head": str(price_per_head),
+                    "group_size": str(size),
+                    "location": FIXED_LOCATION,
+                    "conference_date": FIXED_CONFERENCE_DATE,
+                }
+            })
+            return {
+                "key": KEY_ID,
+                "order": order,
+                "amount": amount_paise,
+                "display": {
+                    "tier": f"Group ({size})",
+                    "base_rupees": base,
+                    "discount_rupees": (base - price_per_head),
+                    "final_rupees": total_rupees,
+                }
+            }
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
     amount_paise = final_amt_rupees * 100
     try:
