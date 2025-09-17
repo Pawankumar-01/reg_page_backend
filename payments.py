@@ -54,6 +54,16 @@ def current_tier_and_price(d: date | None = None) -> tuple[str, int]:
 def normalize(code: str | None) -> str:
     return (code or "").strip().upper()
 
+
+def free_coupon_used_count() -> int:
+    """Count how many people already registered with FREE coupon."""
+    try:
+        res = supabase.table("registrations").select("id", count="exact").eq("tier", "FREE").execute()
+        return res.count or 0
+    except Exception as e:
+        print(f"⚠️ Failed to fetch free coupon usage: {e}")
+        return 0
+
 def validate_coupon(code: str | None) -> str | None:
     """
     Returns type of coupon:
@@ -63,6 +73,8 @@ def validate_coupon(code: str | None) -> str | None:
     """
     code = normalize(code)
     if code == "FREEIPSA2025":
+        if free_coupon_used_count() >= 50:   # ✅ limit check
+            return None
         return "FREE"
     if code == "IPSA2025":
         return "DISCOUNT"
@@ -79,7 +91,9 @@ def apply_coupon(base: int, coupon: str | None) -> tuple[int, int, str]:
     code = normalize(coupon)
 
     if code == "FREEIPSA2025":
-        return (base, 0, "FREE")   # Full discount
+        if free_coupon_used_count() >= 50:   #  prevent overuse
+            return (0, base, "NONE")
+        return (base, 0, "FREE")
 
     if code == "IPSA2025":
         discount = base // 2
@@ -223,7 +237,7 @@ def validate(body: CouponRequest):
         "message": (
             "Free registration applied" if ctype == "FREE" else
             "Discount applied" if ctype == "DISCOUNT" else
-            "Invalid coupon"
+            "Invalid coupon or free quota exhausted"
         )
     }
 
