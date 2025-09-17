@@ -37,7 +37,28 @@ class CreateOrderRequest(BaseModel):
     email: str
     college: str | None = None
     type: str | None = None
+
+
+class GroupMember(BaseModel):
+    name: str
+    email: str
+    college: str | None = None
+    type: str | None = None
+
+class CreateOrderRequest(BaseModel):
+    coupon: str | None = None
+    name: str | None = None   # for single registration
+    email: str | None = None
+    college: str | None = None
+    type: str | None = None
+    group_members: list[GroupMember] | None = None
    
+def group_discount_price(size: int) -> int:
+    if 5 <= size <= 10:
+        return 400   # 60% discount
+    if size > 10:
+        return 300   # 70% discount
+    return 1000      # no group discount
 
 def today_ist() -> date:
     # keep cutoffs in India time
@@ -276,6 +297,10 @@ def create_order(body: CreateOrderRequest):
             "message": "Registered with free coupon – no payment required.",
             "free_coupon": True,
         }
+    if body.group_members and len(body.group_members) >= 5:
+        size = len(body.group_members)
+        price_per_head = group_discount_price(size)
+        total_rupees = price_per_head * size
 
     amount_paise = final_amt_rupees * 100
     try:
@@ -315,12 +340,46 @@ class VerifyPayload(BaseModel):
     razorpay_order_id: str
     razorpay_payment_id: str
     razorpay_signature: str
+    group_members: list[GroupMember] | None = None
 
 @router.post("/verify-payment")
 def verify_payment(payload: VerifyPayload):
+    FIXED_LOCATION = "T-HUB"
+    FIXED_CONFERENCE_DATE = "2025-09-21"
+
     try:
         order = client.order.fetch(payload.razorpay_order_id)
         notes = order.get("notes", {})
+        if payload.group_members and len(payload.group_members) >= 5:
+            size = len(payload.group_members)
+            price_per_head = group_discount_price(size)
+
+            for member in payload.group_members:
+                send_ack_email(
+                    to_email=member.email,
+                    name=member.name,
+                    tier=f"Group ({size})",
+                    location=FIXED_LOCATION,
+                    conference_date=FIXED_CONFERENCE_DATE,
+                    final_amount=str(price_per_head),
+                )
+                store_registration(
+                    name=member.name,
+                    email=member.email,
+                    tier=f"Group ({size})",
+                    amount=str(price_per_head),
+                    location=FIXED_LOCATION,
+                    conference_date=FIXED_CONFERENCE_DATE,
+                    college=member.college,
+                    type_=member.type,
+                )
+
+            return {
+                "status": "success",
+                "order_id": payload.razorpay_order_id,
+                "group_size": size,
+                "price_per_head": price_per_head,
+            }
 
         # send acknowledgment email after payment
         send_ack_email(
