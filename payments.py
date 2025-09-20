@@ -72,7 +72,7 @@ def current_tier_and_price(d: date | None = None) -> tuple[str, int]:
         return ("Early Bird", 1000)
     if d <= REGULAR_END:
         return ("Regular", 1000)
-    return ("Late/Onsite", 1500)
+    return ("Late/Onsite", 1000)
 
 def normalize(code: str | None) -> str:
     return (code or "").strip().upper()
