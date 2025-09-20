@@ -34,6 +34,7 @@ class CouponRequest(BaseModel):
 class CreateOrderRequest(BaseModel):
     coupon: str | None = None
     name: str
+    phone: int
     email: str
     college: str | None = None
     type: str | None = None
@@ -47,7 +48,8 @@ class GroupMember(BaseModel):
 
 class CreateOrderRequest(BaseModel):
     coupon: str | None = None
-    name: str | None = None   # for single registration
+    name: str | None = None 
+    phone: int| None = None 
     email: str | None = None
     college: str | None = None
     type: str | None = None
@@ -220,11 +222,12 @@ def send_ack_email(to_email: str, name: str, tier: str, location: str, conferenc
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
 
-def store_registration(name: str, email: str, tier: str, amount: str, location: str, conference_date: str, college:str,type_: str | None = None):
+def store_registration(name: str, email: str, phone:int, tier: str, amount: str, location: str, conference_date: str, college:str,type_: str | None = None):
     try:
         data = {
             "name": name,
             "email": email,
+            "phone": phone,
             "tier": tier,
             "amount_paid": amount,
             "location": location,
@@ -281,6 +284,7 @@ def create_order(body: CreateOrderRequest):
         store_registration(
             name=body.name,
             email=body.email,
+            phone=body.phone,
             tier="FREE",
             amount="0",
             location=FIXED_LOCATION,
@@ -321,6 +325,7 @@ def create_order(body: CreateOrderRequest):
                     "group_size": str(size),
                     "location": FIXED_LOCATION,
                     "conference_date": FIXED_CONFERENCE_DATE,
+                    "phones": ",".join(str(m.phone) for m in body.group_members)
                 }
             })
             return {
@@ -351,6 +356,7 @@ def create_order(body: CreateOrderRequest):
                     "coupon": normalize(body.coupon),
                     "name": body.name,
                     "email": body.email,
+                    "phone": body.phone,
                     "college": body.college or "N/A",
                     "type": body.type or "N/A", 
                     "location": FIXED_LOCATION,
@@ -401,6 +407,7 @@ def verify_payment(payload: VerifyPayload):
                 store_registration(
                     name=member.name,
                     email=member.email,
+                    phone=member.phone,
                     tier=f"Group ({size})",
                     amount=str(price_per_head),
                     location=FIXED_LOCATION,
