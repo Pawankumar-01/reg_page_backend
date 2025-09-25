@@ -21,7 +21,7 @@ KEY_SECRET = config("RAZORPAY_SECRET")
 client = razorpay.Client(auth=(KEY_ID, KEY_SECRET))
 
 EARLY_END = date(2025, 9, 9)   # inclusive
-REGULAR_END = date(2025, 9, 18)  # inclusive
+REGULAR_END = date(2025, 10, 11)  # inclusive
 
 SMTP_HOST = config("SMTP_HOST", default="smtp.gmail.com")
 SMTP_PORT = int(config("SMTP_PORT", default="587"))
