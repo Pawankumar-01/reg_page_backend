@@ -95,11 +95,11 @@ def validate_coupon(code: str | None) -> str | None:
     - None if invalid
     """
     code = normalize(code)
-    if code == "FREEIPSA2025":
+    if code == "FREEIPRISM2025":
         if free_coupon_used_count() >=54:   # ✅ limit check
             return None
         return "FREE"
-    if code == "IPSA2025":
+    if code == "IPRISM2025":
         return "DISCOUNT"
     return None
 
@@ -113,12 +113,12 @@ def apply_coupon(base: int, coupon: str | None) -> tuple[int, int, str]:
 
     code = normalize(coupon)
 
-    if code == "FREEIPSA2025":
-        if free_coupon_used_count() >=54:   #  prevent overuse
+    if code == "FREEIPRISM2025":
+        if free_coupon_used_count() >=100:   #  prevent overuse
             return (0, base, "NONE")
         return (base, 0, "FREE")
 
-    if code == "IPSA2025":
+    if code == "IPRISM2025":
         discount = base // 2
         return (discount, base - discount, "DISCOUNT")
 
