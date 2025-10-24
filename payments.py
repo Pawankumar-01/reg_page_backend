@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from decouple import config
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel
 import razorpay
 import smtplib
@@ -21,7 +21,7 @@ KEY_SECRET = config("RAZORPAY_SECRET")
 client = razorpay.Client(auth=(KEY_ID, KEY_SECRET))
 
 EARLY_END = date(2025, 9, 9)   # inclusive
-REGULAR_END = date(2025, 10, 11)  # inclusive
+REGULAR_END = date(2025, 12, 11)  # inclusive
 
 SMTP_HOST = config("SMTP_HOST", default="smtp.gmail.com")
 SMTP_PORT = int(config("SMTP_PORT", default="587"))
@@ -96,7 +96,7 @@ def validate_coupon(code: str | None) -> str | None:
     """
     code = normalize(code)
     if code == "FREEIPRISM2025":
-        if free_coupon_used_count() >=54:   # ✅ limit check
+        if free_coupon_used_count() >=100:   # ✅ limit check
             return None
         return "FREE"
     if code == "IPRISM2025":
@@ -138,7 +138,7 @@ def send_ack_email(to_email: str, name: str, tier: str, location: str, conferenc
         print("⚠️ SMTP not configured, skipping email.")
         return
 
-    subject = "🎉 IPSA 2025 – Registration Confirmation"
+    subject = "🎉 IPRISM 2025 – Registration Confirmation"
 
     body = f"""
     <html>
@@ -277,7 +277,7 @@ def create_order(body: CreateOrderRequest):
     discount, final_amt_rupees, ctype = apply_coupon(base, body.coupon)
 
     FIXED_LOCATION = "T-HUB"
-    FIXED_CONFERENCE_DATE = "2025-09-21"
+    FIXED_CONFERENCE_DATE = "2025-10-26"
 
     # --- FREE coupon path ---
     if ctype == "FREE":
@@ -389,21 +389,17 @@ def verify_payment(payload: VerifyPayload):
     FIXED_CONFERENCE_DATE = "2025-09-21"
 
     try:
+        # Fetch the Razorpay order
         order = client.order.fetch(payload.razorpay_order_id)
         notes = order.get("notes", {})
-        if payload.group_members and len(payload.group_members) >= 5:
+
+        # --- 1. Handle group members if provided ---
+        if payload.group_members:
             size = len(payload.group_members)
             price_per_head = group_discount_price(size)
 
             for member in payload.group_members:
-                send_ack_email(
-                    to_email=member.email,
-                    name=member.name,
-                    tier=f"Group ({size})",
-                    location=FIXED_LOCATION,
-                    conference_date=FIXED_CONFERENCE_DATE,
-                    final_amount=str(price_per_head),
-                )
+                # Store registration
                 store_registration(
                     name=member.name,
                     email=member.email,
@@ -412,46 +408,55 @@ def verify_payment(payload: VerifyPayload):
                     amount=str(price_per_head),
                     location=FIXED_LOCATION,
                     conference_date=FIXED_CONFERENCE_DATE,
-                    college=member.college,
-                    type_=member.type,
+                    college=member.college or "N/A",
+                    type_=member.type or "N/A",
+                )
+                # Send acknowledgment email
+                send_ack_email(
+                    to_email=member.email,
+                    name=member.name,
+                    tier=f"Group ({size})",
+                    location=FIXED_LOCATION,
+                    conference_date=FIXED_CONFERENCE_DATE,
+                    final_amount=str(price_per_head),
                 )
 
-            return {
-                "status": "success",
-                "order_id": payload.razorpay_order_id,
-                "group_size": size,
-                "price_per_head": price_per_head,
-            }
+        # --- 2. Handle individual registration (or fallback for group with notes) ---
+        if notes.get("name") and notes.get("email"):
+            # Log for debugging
+            print("💡 Storing individual registration:", notes)
 
-        # send acknowledgment email after payment
-        send_ack_email(
-            to_email=notes.get("email"),
-            name=notes.get("name"),
-            tier=notes.get("tier"),
-            location=notes.get("location"),
-            conference_date=notes.get("conference_date"),
-            final_amount=notes.get("final_rupees"),
-        )
+            store_registration(
+                name=notes.get("name"),
+                email=notes.get("email"),
+                phone=notes.get("phone"),
+                tier=notes.get("tier"),
+                amount=notes.get("final_rupees"),
+                location=notes.get("location"),
+                conference_date=notes.get("conference_date"),
+                college=notes.get("college"),
+                type_=notes.get("type"),
+            )
 
-        # store registration in Supabase
-        store_registration(
-            name=notes.get("name"),
-            email=notes.get("email"),
-            tier=notes.get("tier"),
-            amount=notes.get("final_rupees"),
-            location=notes.get("location"),
-            conference_date=notes.get("conference_date"),
-            college=notes.get("college"),
-            type_=notes.get("type"),
-        )
+            send_ack_email(
+                to_email=notes.get("email"),
+                name=notes.get("name"),
+                tier=notes.get("tier"),
+                location=notes.get("location"),
+                conference_date=notes.get("conference_date"),
+                final_amount=notes.get("final_rupees"),
+            )
 
         return {
             "status": "success",
             "order_id": payload.razorpay_order_id,
             "notes": notes,
+            "group_size": len(payload.group_members) if payload.group_members else 0
         }
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Verification failed: {e}")
+
 
 ###
 @router.post("/test-registration")
@@ -520,5 +525,52 @@ def test_group_registration(req: TestGroupRequest):
     }
 
 
+
+
+class TestPaidRequest(BaseModel):
+    name: str
+    email: str
+    phone: int
+    college: str | None = None
+    type: str | None = None
+    amount: int = 1000  # default paid amount
+
+@router.post("/test-paid-registration")
+def test_paid_registration(body: TestPaidRequest = Body(...)):
+    FIXED_LOCATION = "T-HUB"
+    FIXED_CONFERENCE_DATE = "2025-09-21"
+
+    tier = "Regular"
+    final_amount = str(body.amount)
+
+    # Store registration in Supabase (simulate post-payment)
+    store_registration(
+        name=body.name,
+        email=body.email,
+        phone=body.phone,
+        tier=tier,
+        amount=final_amount,
+        location=FIXED_LOCATION,
+        conference_date=FIXED_CONFERENCE_DATE,
+        college=body.college or "N/A",
+        type_=body.type or "N/A",
+    )
+
+    # Send acknowledgment email (optional)
+    send_ack_email(
+        to_email=body.email,
+        name=body.name,
+        tier=tier,
+        location=FIXED_LOCATION,
+        conference_date=FIXED_CONFERENCE_DATE,
+        final_amount=final_amount,
+    )
+
+    return {
+        "status": "success",
+        "message": f"✅ Test paid registration stored for {body.name} ({body.email})",
+        "tier": tier,
+        "amount": final_amount,
+    }
 
 
