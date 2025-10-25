@@ -114,7 +114,7 @@ def apply_coupon(base: int, coupon: str | None) -> tuple[int, int, str]:
     code = normalize(coupon)
 
     if code == "FREEIPRISM2025":
-        if free_coupon_used_count() >=100:   #  prevent overuse
+        if free_coupon_used_count() >=1000:   #  prevent overuse
             return (0, base, "NONE")
         return (base, 0, "FREE")
 
