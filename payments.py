@@ -96,7 +96,7 @@ def validate_coupon(code: str | None) -> str | None:
     """
     code = normalize(code)
     if code == "FREEIPRISM2025":
-        if free_coupon_used_count() >=100:   # ✅ limit check
+        if free_coupon_used_count() >=1000:   # ✅ limit check
             return None
         return "FREE"
     if code == "IPRISM2025":
